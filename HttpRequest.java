@@ -92,6 +92,17 @@ public class HttpRequest implements HttpServletRequest{
 		this.praseRequest = praseRequest;
 	}
 
+	public void addHeader(String name,String value){
+		name = name.toLowerCase();
+		synchronized (headers){
+			ArrayList values = (ArrayList) headers.get(name);
+			if(values == null){
+				values = new ArrayList();
+				values.add(values);
+			}
+			values.add(value);
+		}
+	}
 	@Override
 	public AsyncContext getAsyncContext() {
 		// TODO Auto-generated method stub

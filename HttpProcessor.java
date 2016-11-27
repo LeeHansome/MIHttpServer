@@ -16,7 +16,7 @@ import javax.servlet.ServletException;
 
 
 import org.apache.catalina.util.StringManager;
-
+import com.hsm.connector.http.HttpHeader;
 import com.hsm.Processor.ServletProcessor;
 import com.hsm.Processor.StaticResourceProcessor;
 import com.hsm.connector.http.HttpRequest;
@@ -144,6 +144,23 @@ public class HttpProcessor {
 			throw new ServletException("Invalid URI:"+uri+"'");
 	}
 
+	private void praseHeader(SocketInputStream input){
+		while(true){
+			HttpHeader header = new HttpHeader();
+			input.readHeader(header);
+			if(header.nameEnd == 0){
+				if(header.valueEnd == 0)
+					return;
+				else{
+					throw new ServletException(ssm.getString("httpProcessor.parseHeaders.colon"));
+				}
+			}
+
+			String name = new String(header.name,0,header.nameEnd);
+			String value = new String(header.value,0,header.valueEnd);
+			request.addHeader(name,value);
+		}
+	}
 
 	protected String nomallize(String path) {
 		if(path == null)
