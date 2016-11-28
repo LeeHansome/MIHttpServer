@@ -1,10 +1,7 @@
 package com.hsm;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
 
 import javax.servlet.ServletException;
@@ -17,12 +14,14 @@ import javax.servlet.ServletException;
 
 
 
-import org.apache.catalina.util.StringManager;
 
+import org.apache.catalina.util.StringManager;
+import com.hsm.connector.http.HttpHeader;
 import com.hsm.Processor.ServletProcessor;
 import com.hsm.Processor.StaticResourceProcessor;
 import com.hsm.connector.http.HttpRequest;
 import com.hsm.connector.http.HttpRequestLine;
+import com.hsm.connector.http.HttpResponse;
 import com.hsm.connector.http.Httpconnector;
 import com.hsm.connector.http.SocketInputStream;
 
@@ -34,17 +33,16 @@ public class HttpProcessor {
 	//private HttpResponse response;
 	protected String method = null;
 	protected String queryString = null;
-	protected StringManager sm = StringManager.getManager("com.hsm.connnector.http");
+	protected StringManager sm = StringManager.getManager("com.hsm.connector.http");
 	
 	public static String SHUTDOWN_COMMAND = "/shutdown";
-	public static final String WEB_ROOT = System.getProperty("user.dir")+File.separator+"webRoot";
  
 	public HttpProcessor(Httpconnector httpconnector){
 		this.httpconnector = httpconnector;
 	}
 	
 	
-	public void process(Socket socket){
+	public void process(Socket socket) throws IOException, ServletException{
 		SocketInputStream input = null;
 		OutputStream ouput = null;
 		try {
@@ -54,9 +52,9 @@ public class HttpProcessor {
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		Request request = new Request(input);
-		request.prase();
-		Response response = new Response(ouput);
+		HttpRequest request = new HttpRequest(input);
+		praseRequest(input, ouput);
+		HttpResponse response = new HttpResponse(ouput);
 		response.setRequest(request);
 		if(request.getUrl()!=null&&request.getUrl().startsWith("/servlet")){
 			ServletProcessor servletProcessor = new ServletProcessor();
@@ -146,6 +144,23 @@ public class HttpProcessor {
 			throw new ServletException("Invalid URI:"+uri+"'");
 	}
 
+	private void praseHeader(SocketInputStream input){
+		while(true){
+			HttpHeader header = new HttpHeader();
+			input.readHeader(header);
+			if(header.nameEnd == 0){
+				if(header.valueEnd == 0)
+					return;
+				else{
+					throw new ServletException(ssm.getString("httpProcessor.parseHeaders.colon"));
+				}
+			}
+
+			String name = new String(header.name,0,header.nameEnd);
+			String value = new String(header.value,0,header.valueEnd);
+			request.addHeader(name,value);
+		}
+	}
 
 	protected String nomallize(String path) {
 		if(path == null)
